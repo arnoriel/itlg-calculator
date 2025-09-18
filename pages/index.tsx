@@ -9,14 +9,15 @@ type Result = {
 };
 
 export default function CryptoAssetCalculator() {
-  const [pricePerCoin, setPricePerCoin] = useState<string>("0.4796");
+  const [pricePerCoin, setPricePerCoin] = useState<string>("0.5");
   const [currentCoins, setCurrentCoins] = useState<string>("");
   const [dailyCoins, setDailyCoins] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const [usdToIdr, setUsdToIdr] = useState<string>("16000");
+  const [usdToIdr, setUsdToIdr] = useState<string>("");
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string>("");
   const [isCalculating, setIsCalculating] = useState(false);
+  const [isLoadingRate, setIsLoadingRate] = useState(false);
   
   // Performance mode state
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -24,6 +25,30 @@ export default function CryptoAssetCalculator() {
 
   // Animated background particles (only for non-performance mode)
   const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, size: number, opacity: number}>>([]);
+
+  // Fetch USD to IDR rate from API
+  const fetchExchangeRate = useCallback(async () => {
+    setIsLoadingRate(true);
+    try {
+      const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+      const data = await response.json();
+      if (data.rates && data.rates.IDR) {
+        setUsdToIdr(data.rates.IDR.toString());
+      } else {
+        setError("Gagal memuat kurs USD→IDR. Gunakan nilai default.");
+        setUsdToIdr("15000");
+      }
+    } catch (err) {
+      setError("Gagal memuat kurs USD→IDR. Gunakan nilai default.");
+      setUsdToIdr("15000");
+    } finally {
+      setIsLoadingRate(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchExchangeRate();
+  }, [fetchExchangeRate]);
 
   useEffect(() => {
     if (!isPerformanceMode) {
@@ -135,7 +160,8 @@ export default function CryptoAssetCalculator() {
     const sampleEnd = new Date();
     sampleEnd.setMonth(sampleEnd.getMonth() + 1);
     setEndDate(sampleEnd.toISOString().slice(0, 10));
-  }, []);
+    fetchExchangeRate();
+  }, [fetchExchangeRate]);
 
   // Enhanced theme classes that handle both modes
   const themeClasses = useMemo(() => {
@@ -194,7 +220,7 @@ export default function CryptoAssetCalculator() {
         };
       }
     } else {
-      // Full theme for normal mode (existing implementation)
+      // Full theme for normal mode
       return {
         background: isDarkMode 
           ? "bg-gradient-to-br from-gray-900 via-slate-800 to-black" 
@@ -343,7 +369,7 @@ export default function CryptoAssetCalculator() {
                   isDarkMode ? "bg-white/50" : "bg-gray-400"
                 }`}></div>
               )}
-              <p className={`text-xs sm:text-sm md:text-lg max-w-2xl mx-auto leading-relaxed px-2 sm:px-4 ${themeClasses.text.secondary}`}>
+              <p className={`text-xs sm:text-sm md:text-lg max-w-2xl mx-auto leading-relaxed px-2 sm:px-4 ${themeClasses.text.muted}`}>
                 {isPerformanceMode 
                   ? "Hitung nilai aset kripto Anda dengan proyeksi otomatis"
                   : "Hitung nilai aset kripto Anda dengan proyeksi otomatis dan tampilan real-time yang menawan"
@@ -367,7 +393,7 @@ export default function CryptoAssetCalculator() {
                       ? themeClasses.text.secondary
                       : `transition-colors ${themeClasses.text.secondary} group-focus-within:${themeClasses.text.primary}`
                   }`}>
-                    Harga per koin dalam USDT {isPerformanceMode ? "" : "(sesuai dari apespace.com)"}
+                    Harga per koin dalam USDT {isPerformanceMode ? "" : "(yang di prediksi dan di ekspektasikan, bisa diganti pakai harga berapapun)"}
                   </label>
                   <input
                     inputMode="decimal"
@@ -388,15 +414,29 @@ export default function CryptoAssetCalculator() {
                   }`}>
                     Kurs USD → IDR
                   </label>
-                  <input
-                    inputMode="decimal"
-                    value={usdToIdr}
-                    onChange={(e) => setUsdToIdr(e.target.value)}
-                    className={`w-full p-3 md:p-4 text-sm md:text-base ${
-                      isPerformanceMode ? 'rounded-xl' : 'rounded-2xl backdrop-blur-sm'
-                    } border focus:outline-none focus:ring-2 transition-all duration-300 ${themeClasses.input}`}
-                    placeholder="15000"
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      inputMode="decimal"
+                      value={usdToIdr}
+                      onChange={(e) => setUsdToIdr(e.target.value)}
+                      className={`w-full p-3 md:p-4 text-sm md:text-base ${
+                        isPerformanceMode ? 'rounded-xl' : 'rounded-2xl backdrop-blur-sm'
+                      } border focus:outline-none focus:ring-2 transition-all duration-300 ${themeClasses.input}`}
+                      placeholder="15000"
+                    />
+                    <button
+                      onClick={fetchExchangeRate}
+                      disabled={isLoadingRate}
+                      className={`p-3 rounded-xl transition-all duration-300 ${
+                        isDarkMode 
+                          ? "bg-white/10 border-white/20 text-white hover:bg-white/20"
+                          : "bg-white/70 border-gray-200 text-gray-700 hover:bg-white/90"
+                      } ${isLoadingRate ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'}`}
+                      title="Refresh Kurs"
+                    >
+                      {isLoadingRate ? '🔄' : '🔄'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className={`sm:col-span-2 ${isPerformanceMode ? "" : "group"}`}>
