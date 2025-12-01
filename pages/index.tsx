@@ -9,7 +9,7 @@ type Result = {
 };
 
 export default function CryptoAssetCalculator() {
-  const [pricePerCoin, setPricePerCoin] = useState<string>("0.5");
+  const [pricePerCoin, setPricePerCoin] = useState<string>("0.4800");
   const [currentCoins, setCurrentCoins] = useState<string>("");
   const [dailyCoins, setDailyCoins] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
